@@ -1,11 +1,143 @@
 pipeline {
-  agent any
-  stages {
-    stage('test') {
-      steps {
-        echo 'test'
-      }
+    agent any
+
+    /* 触发规则配置 */
+    triggers {
+        pollSCM '*/1 * * * *'
     }
 
-  }
+    /* 环境变量配置 */
+    environment {
+        /* jenkins 地址 */
+        jenkinsUrl = 'http://146.56.234.30:8080'
+        /* 项目基础信息配置信息 */
+        projectName = 'clawhammer'
+        codeVersion = 'clawhammer 0.1'
+        jarName = 'clawhammer.jar'
+        /* Sonar配置信息 */
+        sonarUrl = 'http://146.56.234.30:9000'
+        sonarKey = 'clawhammer_0.1'
+        sonarToken = '4fb7cc7b36d8c8052df114e50b85ae45b76fc24e';
+        /* 钉钉通知配置信息 */
+        dingDingId = '40024bfd-e34e-4b84-a986-1cd8f81ae0ce'
+        /* 资源发布配置信息 */
+        deployServer = 'tencent'
+        publishDir = '/project'
+        execCommand = 'sh /home/project/start.sh'
+    }
+
+    stages {
+
+        /* 检查环境 */
+        stage('check environment') {
+            steps {
+                echo "get code version: ${codeVersion}"
+            }
+        }
+
+        // /* 拉取代码 */
+        // stage('pull code') {
+        //     steps {
+        //         git branch: 'develop-0.1',
+        //                 credentialsId: 'jenkins-generated-ssh-key',
+        //                 url: 'git@182.254.153.226:cdli/clawhammer.git'
+        //     }
+        // }
+
+        /* 代码编译 */
+        stage('compile') {
+            steps {
+                script {
+                    mavenHome = tool 'maven'
+                }
+
+               echo "${mavenHome}"
+            }
+        }
+
+        // /* 通过maven命令进行代码检查 */
+        // stage('code check') {
+        //     steps {
+        //         script {
+        //             mavenHome = tool 'maven'
+        //         }
+
+        //         sh "${mavenHome}/bin/mvn sonar:sonar " +
+        //                 "  -Dsonar.projectKey=${sonarKey} " +
+        //                 "  -Dsonar.host.url=${sonarUrl} " +
+        //                 "  -Dsonar.login=${sonarToken}"
+
+        //         echo 'use sonar check code success'
+        //         script {
+        //             /* 调用sonar openApi获取最新扫描结果 */
+        //             def response = httpRequest "http://111.231.65.103:8080/sonar/open/project/generalView?projectKey=${sonarKey}&sonarUrl=${sonarUrl}&authToken=YWRtaW46MTIzNDU2"
+        //             println(response.content)
+
+        //             def props = readJSON text: response.content
+        //             def newBugNum = props['newBugNum']
+        //             def newVulnerabilities = props['newVulnerabilities']
+        //             def newSecurityHotspots = props['newSecurityHotspots']
+        //             def newCodeSmells = props['newCodeSmells']
+        //             def checkTime = props['checkTime']
+
+        //             dingtalk(
+        //                     robot: "${dingDingId}",
+        //                     type: 'ACTION_CARD',
+        //                     title: "${projectName} - 代码扫描结果",
+        //                     text: [
+        //                             "### ${codeVersion}",
+        //                             "新增Bugs：${newBugNum}\n",
+        //                             "新增漏洞：${newVulnerabilities}\n",
+        //                             "新安全热点：${newSecurityHotspots}\n",
+        //                             "新异味数：${newCodeSmells}\n",
+        //                             "扫描时间：${checkTime}",
+        //                     ],
+        //                     btns: [
+        //                             [
+        //                                 title    : 'Sonar漏洞扫描结果',
+        //                                 actionUrl: "${sonarUrl}/dashboard?id=${sonarKey}"
+        //                             ],
+        //                             [
+        //                                 title    : '部署流程控制面板',
+        //                                 actionUrl: "${jenkinsUrl}/jenkins/blue/organizations/jenkins/${projectName}/branches"
+        //                             ]
+        //                     ],
+        //                     btnLayout: 'V',
+        //                     at: ['18260356236']
+        //             )
+        //         }
+
+        //     }
+        // }
+
+        // /* 发布检查后的资源, 并调用脚本更新服务 */
+        // stage('publish') {
+        //     steps {
+        //         script {
+        //             publisherFlag = fileExists("target/${jarName}");
+        //             if (publisherFlag) {
+        //                 echo "${jarName} exist"
+        //             } else {
+        //                 echo "${jarName} not exist"
+        //             }
+        //         }
+
+        //         sshPublisher(publishers: [
+        //                 sshPublisherDesc(
+        //                         configName: 'tencent',
+        //                         transfers: [sshTransfer(
+        //                                 remoteDirectory: "${publishDir}",
+        //                                 remoteDirectorySDF: false,
+        //                                 removePrefix: "target/",
+        //                                 sourceFiles: "target/${jarName}",
+        //                                 excludes: "",
+        //                                 execCommand: "${execCommand}",
+        //                                 execTimeout: 120000,
+        //                         )],
+        //                 )
+        //         ])
+        //     }
+        // }
+
+    }
 }
